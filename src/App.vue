@@ -84,7 +84,7 @@ const describeImage = async () => {
 
   const parts = [
     {
-      text: 'Please describe this image in detail.',
+      text: '请描述图片，包括时间、环境、人物等元素，所有元素的大小、颜色等特征',
     },
     {
       inlineData: {
@@ -107,55 +107,34 @@ const describeImage = async () => {
   }
 };
 
+function removeTags(input) {
+  return input.replace(/<reasoning>.*?<\/reasoning>|<think>.*?<\/think>/gs, '');
+}
+
 const rewriteDescription = async (description) => {
   try {
     const response = await axios.post(
       'https://dsai.cfworker.cfd/',
       {
-        model: 'deepseek-reasoner',
+        // 4个网站：deepseek, siliconFlow, nvidia, fireworks
+        site: 'fireworks',
         messages: [
           {
             role: 'system',
-            content: 'You are DeepSeek-R1, an AI assistant created exclusively by the Chinese Company DeepSeek. You\'ll provide helpful, harmless, and detailed responses to all user inquiries. For comprehensive details about models and products, please refer to the official documentation.\n' +
-                '\n' +
-                'Key Guidelines:\n' +
-                'Identity & Compliance\n' +
-                'Clearly state your identity as a DeepSeek AI assistant in initial responses.\n' +
-                'Comply with Chinese laws and regulations, including data privacy requirements.\n' +
-                '\n' +
-                'Capability Scope\n' +
-                'Handle both Chinese and English queries effectively\n' +
-                'Acknowledge limitations for real-time information post knowledge cutoff (2023-12)\n' +
-                'Provide technical explanations for AI-related questions when appropriate\n' +
-                '\n' +
-                'Response Quality\n' +
-                'Give comprehensive, logically structured answers\n' +
-                'Use markdown formatting for clear information organization\n' +
-                'Admit uncertainties for ambiguous queries\n' +
-                '\n' +
-                'Ethical Operation\n' +
-                'Strictly refuse requests involving illegal activities, violence, or explicit content\n' +
-                'Maintain political neutrality according to company guidelines\n' +
-                'Protect user privacy and avoid data collection\n' +
-                '\n' +
-                'Specialized Processing\n' +
-                'Use ... tags for internal reasoning before responding\n' +
-                'Employ XML-like tags for structured output when required\n' +
-                '\n' +
-                'Knowledge cutoff: {{current_date}}',
+            content: '你是文学大师，精通古今中外、书本、影视作品里的所有文学，精通著名人物的写作、语言、表演风格',
           },
           {
             role: 'user',
-            content: `根据提示词：\`${prompt.value}\`，重写以下文字，只输出最终文字(和标题，如果有标题的话)，不需要输出额外的说明，不需要输出<reasoning>: \`${description}\``,
+            content: `根据提示词：\`${prompt.value}\`，重写以下描述，只输出最终文字(和标题，如果有标题的话)，不要输出思考过程，不要输出额外的说明: \`${description}\``,
           },
         ],
       },
       { timeout: 600000 }
     );
-    return response.data.choices[0].message.content;
+    return removeTags(response.data.choices[0].message.content);
   } catch (error) {
     console.error('Error rewriting description:', error);
-    return '重写作文失败，请稍后重试。';
+    return '写作失败，请稍后重试。';
   }
 };
 
