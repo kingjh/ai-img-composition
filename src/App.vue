@@ -108,7 +108,7 @@ const describeImage = async () => {
 };
 
 function removeTags(input) {
-  return input.replace(/<reasoning>.*?<\/reasoning>|<think>.*?<\/think>/gs, '');
+  return input.replace(/<reasoning>.*?<\/reasoning>|<think>.*?<\/think>/gs, '').trim();
 }
 
 const rewriteDescription = async (description) => {
