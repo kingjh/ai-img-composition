@@ -1,47 +1,42 @@
 <template>
   <v-app>
     <v-main class="container">
-      <h1 class="text-center">AI计运</h1>
-
-      <v-select
-        v-model="gender"
-        :items="['男性', '女性']"
-        label="性别"
-      ></v-select>
-
-      <VueDatePicker
-        v-model="birthDateTime"
-        :enable-time-picker
-        locale="zh-CN"
-        placeholder="出生日期时间"
+      <h1 class="text-center mb-4">AI看图作文</h1>
+      <v-file-input
+          accept="image/*"
+          label="选择图片"
+          @change="onFileSelected"
+          class="file-input"
+          chips
+          :prepend-icon="false"
       />
-
-      <v-select
-        v-model="province"
-        :items="provinces"
-        label="省份"
-        @update:model-value="onProvinceChange"
-      ></v-select>
-
-      <v-select
-        v-model="city"
-        :items="cities"
-        label="城市"
-      ></v-select>
-
+      <div v-if="selectedImage" class="thumbnail-container">
+        <v-img :src="selectedImage" max-height="100px" contain @click="enlargeImage = true"></v-img>
+      </div>
+      <v-dialog v-model="enlargeImage" fullscreen>
+        <v-card>
+          <v-img :src="selectedImage" contain></v-img>
+          <v-btn @click="enlargeImage = false" class="close-button">关闭</v-btn>
+        </v-card>
+      </v-dialog>
+      <v-textarea class="mt-12"
+                  v-model="prompt"
+                  label="请输入提示词"
+                  placeholder="如'以李白风格描述'"
+      ></v-textarea>
       <div>
         <v-btn
-          color="primary"
-          @click="generateConclusion"
-          :disabled="loading"
-          class="generate-button"
-        >{{ loading ? `持续写了${elapsedTime}秒` : '推算！' }}</v-btn>
-        <div v-if="conclusion" class="composition-text mt-12 mb-8">{{ conclusion }}</div>
+            color="primary"
+            @click="generateComposition"
+            :disabled="!selectedImage || loading"
+            class="generate-button"
+        >{{ loading ? `持续写了${elapsedTime}秒` : '写作！' }}</v-btn>
+        <div v-if="finalComposition" class="composition-text mt-12 mb-8">{{ finalComposition }}</div>
         <v-btn
-          v-if="conclusion"
-          color="secondary"
-          @click="copyConclusion"
-          class="copy-button"
+            v-if="finalComposition"
+            color="secondary"
+            @click="copyComposition"
+            class="copy-button"
         >复制文本</v-btn>
       </div>
     </v-main>
@@ -49,57 +44,66 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref } from 'vue';
 import axios from 'axios';
-import { VApp, VMain, VSelect, VBtn } from 'vuetify/components';
-import VueDatePicker from '@vuepic/vue-datepicker';
-import '@vuepic/vue-datepicker/dist/main.css';
-import Datepicker from '@vuepic/vue-datepicker'
-import '@vuepic/vue-datepicker/dist/main.css'
+import { VApp, VMain, VFileInput, VTextarea, VBtn, VImg, VDialog, VCard } from 'vuetify/components';
 
-const gender = ref('');
-const birthDateTime = ref(null);
-const province = ref('');
-const city = ref('');
-const prompt = computed(() => {
-  if (gender.value && birthDateTime.value && province.value && city.value) {
-    const formattedDate = new Date(birthDateTime.value).toLocaleString('zh-CN', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: 'numeric',
-      second: 'numeric',
-      hour12: false,
-    });
-    return `${gender.value}，${formattedDate}出生于${province.value}${city.value}`;
-  }
-  return '';
-});
-const conclusion = ref('');
+const selectedImage = ref(null);
+const imageDescription = ref('');
+const prompt = ref('以李白风格描述');
+const finalComposition = ref('');
 const loading = ref(false);
+const enlargeImage = ref(false);
 const elapsedTime = ref(0);
 let timerInterval = null;
 
-const provinces = ref([]);
-const cities = ref([]);
+const onFileSelected = (event) => {
+  const file = event.target.files[0];
+  if (!file) {
+    selectedImage.value = null;
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    selectedImage.value = e.target.result;
+  };
+  reader.readAsDataURL(file);
+};
 
-onMounted(async () => {
-  // 模拟获取省市数据
-  provinces.value = ['北京', '上海', '广东'];
-  cities.value = ['广州', '深圳', '珠海'];
-});
+const describeImage = async () => {
+  const fileInput = document.querySelector('input[type="file"]');
+  const file = fileInput.files[0];
 
-const onProvinceChange = (newProvince) => {
-  // 根据选择的省份更新城市数据
-  if (newProvince === '广东') {
-    cities.value = ['广州', '深圳', '珠海'];
-  } else if (newProvince === '北京') {
-    cities.value = ['北京'];
-  } else if (newProvince === '上海') {
-    cities.value = ['上海'];
-  } else {
-    cities.value = [];
+  const url = `https://gai.cfworker.cfd/`;
+  const mimeType = file.type;
+  const base64Data = await new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result.split(',')[1]);
+    reader.readAsDataURL(file);
+  });
+
+  const parts = [
+    {
+      text: '请描述图片，包括时间、环境、人物等元素，所有元素的大小、颜色等特征',
+    },
+    {
+      inlineData: {
+        mimeType,
+        data: base64Data,
+      },
+    },
+  ];
+
+  const data = {
+    contents: [{ role: 'user', parts }],
+  };
+
+  try {
+    const response = await axios.post(url, data, { timeout: 600000 });
+    return response.data.candidates[0].content.parts[0].text;
+  } catch (error) {
+    console.error('Error describing image:', error);
+    return 'Failed to describe image.';
   }
 };
 
@@ -107,57 +111,51 @@ function removeTags(input) {
   return input.replace(/<reasoning>.*?<\/reasoning>|<think>.*?<\/think>/gs, '').trim();
 }
 
-const conclude = async () => {
+const rewriteDescription = async (description) => {
   try {
     const response = await axios.post(
-      'https://dsai.cfworker.cfd/',
-      {
-        // 5个网站：deepseek, siliconFlow, nvidia, fireworks，huoshan
-        site: 'huoshan',
-        temperature: 0,
-        top_p: 0.1,
-        messages: [
-          {
-            role: 'system',
-            content: `
-你现在是一个中国传统八字命理的专业研究人员你熟读穷通宝典，三命通会，滴天髓，渊海子平这些书籍。你熟读千里命稿，协纪辨方书，果老星宗，子平真栓，神峰通考一系列书籍。
-根据"排大运分阳年、阴年。阳年：甲丙戊庚王。阴年：乙丁已辛癸，阳年男，阴年女为顺排，阴年男，阳年女为逆排，具体排法以月干支为基准，进行顺逆，小孩交大运前，以月柱干支为大运十天干：甲乙丙丁戊已庚辛壬癸，十二地支：子丑寅卯辰已午未申酉戌亥。"
-根据以上我所提到的书籍，及相关四柱八字的书籍和经验，对命盘的八字进行分析，内容越全面越好。
-请输出：
-1. 最终正确的结果。
-2. 2025年蛇年这个命盘的整体运势如何，有什么机会和风险呀？
-不要输出思考过程，不要输出额外的说明，不要用markdown格式，谢谢。
-`
-          },
-          {
-            role: 'user',
-            content: `分析这个命盘：阳历：\`${prompt.value}\``
-          },
-        ],
-      },
-      { timeout: 600000 }
+        'https://dsai.cfworker.cfd/',
+        {
+          // 4个网站：deepseek, siliconFlow, nvidia, fireworks
+          site: 'fireworks',
+          messages: [
+            {
+              role: 'system',
+              content: '你是文学大师，精通古今中外、书本、影视作品里的所有文学，精通著名人物的写作、语言、表演风格',
+            },
+            {
+              role: 'user',
+              content: `根据提示词：\`${prompt.value}\`，重写以下描述，只输出最终文字(和标题，如果有标题的话)，不要输出思考过程，不要输出额外的说明: \`${description}\``,
+            },
+          ],
+        },
+        { timeout: 600000 }
     );
     return removeTags(response.data.choices[0].message.content);
   } catch (error) {
     console.error('Error rewriting description:', error);
-    return '推算失败，请稍后重试。';
+    return '写作失败，请稍后重试。';
   }
 };
 
-const generateConclusion = async () => {
+const generateComposition = async () => {
   loading.value = true;
   elapsedTime.value = 0;
   timerInterval = setInterval(() => {
     elapsedTime.value++;
   }, 1000);
-  conclusion.value = await conclude();
+  imageDescription.value = '';
+  finalComposition.value = '';
+  const description = await describeImage();
+  imageDescription.value = description;
+  finalComposition.value = await rewriteDescription(description);
   loading.value = false;
   clearInterval(timerInterval);
 };
 
-const copyConclusion = () => {
+const copyComposition = () => {
   const textarea = document.createElement('textarea');
-  textarea.value = conclusion.value;
+  textarea.value = finalComposition.value;
   textarea.style.position = 'fixed';
   textarea.style.opacity = 0;
   document.body.appendChild(textarea);
@@ -166,9 +164,9 @@ const copyConclusion = () => {
     textarea.select();
     const successful = document.execCommand('copy');
     if (successful) {
-      alert('结论已复制到剪贴板！');
+      alert('作文已复制到剪贴板！');
     } else {
-      alert('复制失败，请手动复制结论内容。');
+      alert('复制失败，请手动复制作文内容。');
     }
   } catch (err) {
     console.error('复制文本时发生错误:', err);

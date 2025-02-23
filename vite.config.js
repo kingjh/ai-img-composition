@@ -11,9 +11,6 @@ export default defineConfig({
     // 输出目录设置为 ../docs
     outDir: path.resolve(__dirname, 'docs'),
     // 静态资源直接输出到 docs 文件夹下
-    assetsDir: '',
-    rollupOptions: {
-      external: ['@vuepic/vue-datepicker'],
-    }
+    assetsDir: ''
   }
 });
