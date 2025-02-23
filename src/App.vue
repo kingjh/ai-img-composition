@@ -116,8 +116,8 @@ const rewriteDescription = async (description) => {
     const response = await axios.post(
         'https://dsai.cfworker.cfd/',
         {
-          // 4个网站：deepseek, siliconFlow, nvidia, fireworks
-          site: 'fireworks',
+          // 5个网站：deepseek, siliconFlow, nvidia, fireworks，huoshan
+          site: 'huoshan',
           messages: [
             {
               role: 'system',
