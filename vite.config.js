@@ -5,7 +5,7 @@ import * as path from 'path';
 // https://vitejs.dev/config/
 export default defineConfig({
   // 设置基础路径为 /项目名/
-  base: '/ai-fortune-telling/',
+  base: '/ai-img-composition/',
   plugins: [vue()],
   build: {
     // 输出目录设置为 ../docs
