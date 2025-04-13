@@ -13,17 +13,8 @@ export default defineConfig({
   build: {
     // 输出目录设置为 ../docs
     outDir: path.resolve(__dirname, 'docs'),
-    // 静态资源放在assets文件夹中
-    assetsDir: 'assets',
-    // 确保正确的MIME类型
-    rollupOptions: {
-      output: {
-        manualChunks: undefined,
-        entryFileNames: 'assets/[name].[hash].js',
-        chunkFileNames: 'assets/[name].[hash].js',
-        assetFileNames: 'assets/[name].[hash].[ext]'
-      }
-    }
+    // 静态资源直接输出到 docs 文件夹下
+    assetsDir: ''
   },
   server: {
     port: 5173,
