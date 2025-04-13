@@ -7,7 +7,7 @@
     "dev": "vite --host",
     "build": "vite build",
     "preview": "vite preview",
-    "copy-public": "powershell -Command \"Copy-Item -Path ./public/* -Destination ./docs/ -Recurse -Force\"",
+    "copy-public": "cp -r public/* docs/ || true",
     "cf-build": "vite build && npm run copy-public"
   },
   "dependencies": {
