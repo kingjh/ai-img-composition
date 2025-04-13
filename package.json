@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite --host",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "cf-build": "cd \"$(pwd)\" && vite build"
   },
   "dependencies": {
     "@google/generative-ai": "^0.2.1",
